@@ -39,7 +39,7 @@ def download_one_entrez_date(date: str, fr_only: bool = False, early_stop: bool 
     container = 'pubmed'
     if fr_only:
         container = 'pubmedfr'
-    existing_pmid = get_inventory_json(conn, date, container, 'notices_inventory')
+    existing_pmid = get_inventory_json(conn=conn, date=date, container=container, path='notices_inventory')
     last_download_date = existing_pmid.get(date, {}).get('last_download_date')
     url = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=('
     if fr_only:
@@ -55,7 +55,7 @@ def download_one_entrez_date(date: str, fr_only: bool = False, early_stop: bool 
     nb_res = int(soup.find('count').text)
     nb_pages = math.ceil(nb_res / RETMAX)
     logger.debug(f'{date} modified since {last_download_date} Pubmed results = {nb_res}, so {nb_pages} pages')
-    all_notices = get_objects(conn, date, container, 'notices')
+    all_notices = get_objects(conn=conn, date=date, container=container, path='notices')
     current_download_date = datetime.datetime.today().strftime('%Y/%m/%d')
     is_modified = False
     id_to_download = []

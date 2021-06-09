@@ -37,7 +37,7 @@ def set_inventory_json(conn: swiftclient.Connection, date: str, inventory_json: 
     return
 
 
-def get_inventory_json(conn: swiftclient.Connection, date: str, container: str, path) -> dict:
+def get_inventory_json(conn: swiftclient.Connection, date: str, container: str, path: str) -> dict:
     try:
         inventory = conn.get_object(container, f'{path}/inventory_{date.replace("/", "")}')[1]
         inventory = inventory.decode()

@@ -1,23 +1,27 @@
 import redis
-from flask import render_template, Blueprint, jsonify, request, current_app
-from rq import Queue, Connection
 
-from pubmed.server.main.logger import get_logger
+from flask import Blueprint, current_app, jsonify, render_template, request
+from rq import Connection, Queue
+
 from pubmed.server.main.tasks import create_task_pubmed
 
 main_blueprint = Blueprint('main', __name__, )
-logger = get_logger()
 
 
 @main_blueprint.route('/', methods=['GET'])
 def home():
-    return render_template('main/home.html')
+    return render_template('home.html')
 
 
 @main_blueprint.route('/pubmed', methods=['POST'])
 def run_task_harvest():
+    """
+    Harvest data from pubmed
+    Expected args:
+    - type: str ['harvest', 'parse', 'load']
+    - date: str 2021/04/26
+    """
     args = request.get_json(force=True)
-    logger.debug(args)
     with Connection(redis.from_url(current_app.config['REDIS_URL'])):
         q = Queue('pubmed', default_timeout=21600)
         task = q.enqueue(create_task_pubmed, args)

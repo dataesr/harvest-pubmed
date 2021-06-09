@@ -3,11 +3,11 @@ from pubmed.server.main.pubmed_parse import pubmed_to_json, pubmed_to_mongo
 
 
 def create_task_pubmed(args: dict) -> None:
-    dt = args.get('dt')
+    date = args.get('date')
     task_type = args.get('type')
-    if task_type == 'harvest' and dt:
-        download_one_entrez_date(dt)
-    elif task_type == 'parse' and dt:
-        pubmed_to_json(dt)
+    if task_type == 'harvest' and date:
+        download_one_entrez_date(date=date)
+    elif task_type == 'parse' and date:
+        pubmed_to_json(date=date)
     elif task_type == 'load':
         pubmed_to_mongo()
