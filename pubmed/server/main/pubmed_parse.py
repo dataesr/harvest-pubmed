@@ -1,9 +1,12 @@
 import datetime
+import json
 import os
 
 import pandas as pd
 import pymongo
+
 from bs4 import BeautifulSoup
+from jsonschema import exceptions, validate
 
 from pubmed.server.main.logger import get_logger
 from pubmed.server.main.utils_mongo import drop_collection
@@ -191,30 +194,46 @@ def parse_pubmed(x: str) -> dict:
     return res
 
 
+def validate_json_schema(data: list, schema: dict) -> bool:
+    is_valid = True
+    try:
+        for datum in data:
+            validate(instance=datum, schema=schema)
+    except exceptions.ValidationError as error:
+        is_valid = False
+        logger.debug(error)
+    return is_valid
+
+
 def parse_pubmed_one_date(date: str) -> pd.DataFrame:
-    logger.debug(f'Parse_pubmed_one_date {date}')
-    all_notices = get_objects(conn, date, 'pubmed', 'notices')
+    logger.debug(f'Parse pubmed one date {date}')
+    all_notices = get_objects(conn=conn, date=date, container='pubmed', path='notices')
     logger.debug(f'Len notices = {len(all_notices)}')
     all_parsed = []
     for notice in all_notices:
-        if 'pmid' not in notice:
-            continue
-        if '<?xml' not in notice['notice']:
+        if 'pmid' not in notice or '<?xml' not in notice['notice']:
             continue
         parsed = parse_pubmed(notice['notice'])
         if parsed:
             all_parsed.append(parsed)
+    schema = json.load(open('schema.json', 'r'))
+    is_valid = validate_json_schema(data=all_parsed, schema=schema)
     df_publis = pd.DataFrame(all_parsed)
-    set_objects(conn, date, df_publis, 'pubmed', 'parsed')
+    if is_valid:
+        set_objects(conn=conn, date=date, all_objects=df_publis, container='pubmed', path='parsed')
+        logger.debug('Parsed notices saved into Object Storage.')
+    else:
+        logger.debug('No parsed notices saved into Object Storage because some are not valid. See previous logs.')
     return df_publis
 
 
 def pubmed_to_json(date: str) -> None:
+    logger.debug(f'Pubmed to json: {date}')
     os.system(f'mkdir -p {PV_MOUNT}pubmed')
     dt_str = date.replace('/', '')
     output_json = f'{PV_MOUNT}pubmed/pubmed_mongo_{dt_str}.jsonl'
     start = datetime.datetime.now()
-    df_publis = parse_pubmed_one_date(date)
+    df_publis = parse_pubmed_one_date(date=date)
     df_publis.to_json(output_json, orient='records', lines=True)
     end = datetime.datetime.now()
     delta = end - start
