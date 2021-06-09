@@ -6,16 +6,17 @@ logger = get_logger()
 
 
 def create_task_pubmed(args: dict) -> None:
+    logger.debug(f'Create task pubmed with args {args}')
+    task = args.get('task')
     date = args.get('date')
-    task_type = args.get('type')
-    if task_type == 'harvest' and date:
+    if task == 'harvest' and date:
         download_one_entrez_date(date=date)
-    elif task_type == 'parse' and date:
+    elif task == 'parse' and date:
         pubmed_to_json(date=date)
-    elif task_type == 'load':
+    elif task == 'load':
         pubmed_to_mongo()
-    elif task_type == 'all':
+    elif task == 'all':
         download_one_entrez_date(date=date)
         pubmed_to_json(date=date)
     else:
-        logger.error('Type error: your request should have a type between "harvest", "parse", "load" or "all".')
+        logger.error('Task error: your request should have a task between "harvest", "parse", "load" or "all".')
