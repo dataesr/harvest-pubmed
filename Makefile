@@ -1,5 +1,5 @@
 DOCKER_IMAGE_NAME=dataesr/pubmed
-CURRENT_VERSION=$(shell cat pubmed/__init__.py | grep -P '(\d\.?){3}' -o)
+CURRENT_VERSION=$(shell cat pubmed/__init__.py | grep -P '(\d+\.?){3}' -o)
 
 install:
 	@echo Installing dependencies...
