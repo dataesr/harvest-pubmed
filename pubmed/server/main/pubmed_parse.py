@@ -40,7 +40,9 @@ def get_date(elt: str) -> str:
 
 
 def parse_pubmed(x: str) -> dict:
-    res = {'source': 'pubmed'}
+    res = {}
+    res['sources'] = ['pubmed']
+    res['domains'] = ['health']
     soup = BeautifulSoup(x, 'lxml')
     # DOI
     doi = None
