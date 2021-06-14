@@ -1,4 +1,4 @@
-DOCKER_IMAGE_NAME=dataesr/pubmed
+DOCKER_IMAGE_NAME=dataesr/harvest-pubmed
 CURRENT_VERSION=$(shell cat pubmed/__init__.py | grep -P '(\d+\.?){3}' -o)
 
 install:
