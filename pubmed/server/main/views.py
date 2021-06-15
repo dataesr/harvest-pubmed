@@ -3,6 +3,7 @@ import redis
 
 from flask import Blueprint, current_app, jsonify, render_template, request
 from rq import Connection, Queue
+import dateutil.parser
 
 from pubmed.server.main.tasks import create_task_pubmed
 
@@ -53,8 +54,8 @@ def run_task_pubmed_interval():
     end_string = args.get('end')
     del args['start']
     del args['end']
-    start_date = datetime.datetime.strptime(start_string, DATE_FORMAT).date()
-    end_date = datetime.datetime.strptime(end_string, DATE_FORMAT).date()
+    start_date = dateutil.parser.parse(start_string).date()
+    end_date = dateutil.parser.parse(end_string).date()
     delta = datetime.timedelta(days=1)
     while start_date <= end_date:
         args['date'] = start_date.strftime(DATE_FORMAT)
