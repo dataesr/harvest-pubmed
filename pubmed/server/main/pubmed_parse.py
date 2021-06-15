@@ -218,7 +218,7 @@ def parse_pubmed_one_date(date: str) -> pd.DataFrame:
         parsed = parse_pubmed(notice['notice'])
         if parsed:
             all_parsed.append(parsed)
-    schema = json.load(open('schema.json', 'r'))
+    schema = json.load(open('/src/pubmed/server/main/schema.json', 'r'))
     is_valid = validate_json_schema(data=all_parsed, schema=schema)
     df_publis = pd.DataFrame(all_parsed)
     if is_valid:

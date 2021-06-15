@@ -205,5 +205,5 @@
         }
     },
     "additionalProperties": false,
-    "required": ["source", "title", "language", "abstract", "publication_date", "publication_year_month", "publication_year", "publication_types", "authors", "affiliations", "keywords", "url", "pmid", "mesh_headings", "databank", "has_grant", "journal_title"]
+    "required": ["sources", "title", "language", "abstract", "publication_date", "publication_year_month", "publication_year", "publication_types", "authors", "affiliations", "keywords", "url", "pmid", "mesh_headings", "databank", "has_grant", "journal_title"]
 }
