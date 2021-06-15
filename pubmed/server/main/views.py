@@ -50,8 +50,8 @@ def run_task_pubmed_interval():
     """
     args = request.get_json(force=True)
     task = args.get('task')
-    start_string = args.get('start')
-    end_string = args.get('end')
+    start_string = args.get('start', "2013/01/01")
+    end_string = args.get('end', datetime.date.today().isoformat())
     del args['start']
     del args['end']
     start_date = dateutil.parser.parse(start_string).date()
