@@ -11,6 +11,7 @@ from jsonschema import exceptions, validate
 from pubmed.server.main.logger import get_logger
 from pubmed.server.main.utils_mongo import drop_collection
 from pubmed.server.main.utils_swift import conn, get_objects, set_objects
+from pubmed.server.main.pubmed_harvest import download_one_entrez_date
 
 PV_MOUNT = '/upw_data/'
 logger = get_logger()
@@ -103,7 +104,9 @@ def parse_pubmed(x: str) -> dict:
         for identifier in identifiers:
             source_id = identifier.attrs['source']
             if source_id.lower() == 'orcid':
-                author['orcid'] = get_orcid(identifier.text)
+                orcid = get_orcid(identifier.text)
+                if orcid:
+                    author['orcid'] = orcid
             if 'external_ids' not in author:
                 author['external_ids'] = []
             author['external_ids'].append({'id_type': source_id.lower(), 'id_value': identifier.text})
@@ -141,7 +144,7 @@ def parse_pubmed(x: str) -> dict:
     else:
         logger.warning('No pubmed element ?')
         logger.warning(x)
-        return
+        return False
     res['url'] = f'https://www.ncbi.nlm.nih.gov/pubmed/{pubmed_id}'
     res['pmid'] = f'{pubmed_id}'
     # MESH
@@ -220,19 +223,31 @@ def parse_pubmed_one_date(date: str) -> pd.DataFrame:
     all_notices = get_objects(conn=conn, date=date, container='pubmed', path='notices')
     logger.debug(f'Len notices = {len(all_notices)}')
     all_parsed = []
+    has_done_full_reshesh = False
     for notice in all_notices:
-        if 'pmid' not in notice or '<?xml' not in notice['notice']:
+        if 'pmid' not in notice:
             continue
-        parsed = parse_pubmed(notice['notice'])
+        try:
+            parsed = parse_pubmed(notice['notice'])
+        except:
+            parsed = None
+
         if parsed:
             all_parsed.append(parsed)
+        elif has_done_full_reshesh is False:
+            logger.debug(f"refresh full download for date {date}")
+            download_one_entrez_date(date=date, refresh_all=True)
+            has_done_full_reshesh = True
+        else:
+            continue
     is_valid = validate_json_schema(data=all_parsed, schema=schema)
     df_publis = pd.DataFrame(all_parsed)
-    if is_valid:
-        set_objects(conn=conn, date=date, all_objects=df_publis, container='pubmed', path='parsed')
-        logger.debug('Parsed notices saved into Object Storage.')
-    else:
-        logger.debug('No parsed notices saved into Object Storage because some are not valid. See previous logs.')
+        
+    set_objects(conn=conn, date=date, all_objects=df_publis, container='pubmed', path='parsed')
+    logger.debug('Parsed notices saved into Object Storage.')
+    
+    if is_valid is False:
+        logger.debug('BEWARE !! Some notices are not schema-valid. See previous logs.')
     return df_publis
 
 
