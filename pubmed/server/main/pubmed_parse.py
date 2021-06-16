@@ -41,10 +41,11 @@ def get_date(elt: str) -> str:
     return f'{year}-{month}-{day}'
 
 
-def parse_pubmed(x: str) -> dict:
+def parse_pubmed(notice: dict) -> dict:
     res = {}
     res['sources'] = ['pubmed']
     res['domains'] = ['health']
+    x = notice['notice']
     soup = BeautifulSoup(x, 'lxml')
     # DOI
     doi = None
@@ -142,7 +143,8 @@ def parse_pubmed(x: str) -> dict:
     if pubmed_id_elt:
         pubmed_id = pubmed_id_elt.text
     else:
-        logger.warning('No pubmed element ?')
+        pmid = notice.get('pmid')
+        logger.warning(f'No pubmed element for pmid {pmid}?')
         logger.warning(x)
         return False
     res['url'] = f'https://www.ncbi.nlm.nih.gov/pubmed/{pubmed_id}'
@@ -228,7 +230,7 @@ def parse_pubmed_one_date(date: str) -> pd.DataFrame:
         if 'pmid' not in notice:
             continue
         try:
-            parsed = parse_pubmed(notice['notice'])
+            parsed = parse_pubmed(notice)
         except:
             parsed = None
 
