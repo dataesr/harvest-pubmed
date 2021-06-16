@@ -1,14 +1,14 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Pubmed notice",
-    "description": "A notice of a pubmed publication based on the parsed notice after download",
+    "title": "Publication metadata",
+    "description": "Schema for publications metadata",
     "type": "object",
     "properties": {
         "sources": {
             "type": "array",
             "items": {
                 "type": "string",
-                "enum": ["pubmed"]
+                "enum": ["pubmed", "html"]
 	    }
         },
         "domains": {
@@ -27,24 +27,46 @@
         },
         "language": {
             "type": "string",
-            "minLength": 2,
-            "maxLength": 2,
-            "enum": ["en", "sp", "fr"]
+            "minLength": 2
         },
         "abstract": {
-            "type": "string"
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "abstract": {
+                        "type": "string"
+		    },
+		    "lang": {
+			"type": "string"
+		    }
+		}
+	    }
+        },
+        "references": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "reference": {
+                        "type": "string"
+		    },
+                    "doi": {
+                        "type": "string",
+            		"pattern": "^10\\.\\d{4,9}/[-._;()/:a-zA-Z0-9]+$"
+		    },
+		    "link": {
+			"type": "string",
+                        "format": "uri"
+		    }
+		}
+	    }
         },
         "publication_date": {
             "type": "string",
             "format": "date",
             "minLength": 10,
             "maxLength": 10
-        },
-        "publication_year_month": {
-            "type": "string",
-            "format": "date",
-            "minLength": 7,
-            "maxLength": 7
         },
         "publication_year": {
             "type": "string",
@@ -74,19 +96,22 @@
                         "type": "string",
                         "pattern": "^(\\d{4}-){3}\\d{3}[0-9X]$"
                     },
+                    "email": {
+                        "type": "string"
+                    },
+                    "corresponding": {
+                        "type": "boolean"
+                    },
                     "external_ids": {
                         "type": "array",
                         "items": {
                             "type": "object",
                             "properties": {
                                 "id_type": {
-                                    "type": "string",
-                                    "enum": ["orcid"]
+                                    "type": "string"
                                 },
                                 "id_value": {
-                                    "type": "string",
-                                    "format": "uri",
-                                    "pattern": "^(http(s)?://orcid\\.org/)?(\\d{4}-){3}\\d{3}[0-9X]$"
+                                    "type": "string"
                                 }
                             },
                             "required": ["id_type", "id_value"]
@@ -95,6 +120,9 @@
                     "full_name": {
                         "type": "string"
                     },
+                    "author_position": {
+                        "type": "integer"
+                    },
                     "affiliations": {
                         "type": "array",
                         "items": {
@@ -102,6 +130,21 @@
                             "properties": {
                                 "name": {
                                     "type": "string"
+                                },
+                    		"external_ids": {
+                        	    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id_type": {
+                                                "type": "string"
+                                            },
+                                            "id_value": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "required": ["id_type", "id_value"]
+                                    }
                                 }
                             }
                         }
@@ -118,6 +161,21 @@
                 "properties": {
                     "name": {
                         "type": "string"
+                    },
+                    "external_ids": {
+                        "type": "array",
+                         "items": {
+                             "type": "object",
+                             "properties": {
+                                  "id_type": {
+                                      "type": "string"
+                                  },
+                                  "id_value": {
+                                      "type": "string"
+                                  }
+			     },
+                              "required": ["id_type", "id_value"]
+                        }
                     }
                 },
                 "additionalProperties": false,
@@ -127,13 +185,20 @@
         "keywords": {
             "type": "array",
             "items": {
-                "type": "string"
-            }
+                "type": "object",
+                "properties": {
+                    "keyword": {
+                        "type": "string"
+		    },
+		    "lang": {
+			"type": "string"
+		    }
+		}
+	    }
         },
         "url": {
             "type":  "string",
-            "format": "uri",
-            "pattern": "^https://www\\.ncbi\\.nlm\\.nih\\.gov/pubmed/\\d{8}$"
+            "format": "uri"
         },
         "pmid": {
             "type": "string",
@@ -205,5 +270,5 @@
         }
     },
     "additionalProperties": false,
-    "required": ["sources", "title", "language", "abstract", "publication_date", "publication_year_month", "publication_year", "publication_types", "authors", "affiliations", "keywords", "url", "pmid", "mesh_headings", "databank", "has_grant", "journal_title"]
+    "required": ["sources", "title", "url"]
 }

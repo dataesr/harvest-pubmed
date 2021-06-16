@@ -15,6 +15,7 @@ from pubmed.server.main.utils_swift import conn, get_objects, set_objects
 PV_MOUNT = '/upw_data/'
 logger = get_logger()
 
+schema = json.load(open('/src/pubmed/server/main/schema.json', 'r'))
 
 def get_orcid(x: str) -> str:
     for s in x.split('/'):
@@ -61,21 +62,27 @@ def parse_pubmed(x: str) -> dict:
     if soup.find('articletitle'):
         title = soup.find('articletitle').text
     res['title'] = title
+    #lang
     lang = ''
     if soup.find('language'):
         lang = soup.find('language').text[0:2]
     res['language'] = lang
+    #abstract
     abstract = ''
     if soup.find('abstracttext'):
-        abstract = soup.find('abstracttext').text
-    res['abstract'] = abstract
+        abstract = {'abstract': soup.find('abstracttext').text}
+        if lang:
+            abstract['lang'] = lang
+    if abstract:
+        res['abstract'] = [abstract]
+
     publication_date = get_date(soup.find('articledate'))
     if publication_date[0:4] == 'XXXX':
         publication_date = get_date(soup.find('pubmedpubdate', {'pubstatus': 'entrez'}))
     if publication_date[0:4] == 'XXXX':
         publication_date = get_date(soup.find('datecompleted'))
     res['publication_date'] = publication_date
-    res['publication_year_month'] = res['publication_date'][0:7]
+    #res['publication_year_month'] = res['publication_date'][0:7]
     res['publication_year'] = res['publication_date'][0:4]
     publication_types = []
     for e in soup.find_all('publicationtype'):
@@ -83,8 +90,9 @@ def parse_pubmed(x: str) -> dict:
     res['publication_types'] = publication_types
     authors = []
     affiliations = []
-    for aut in soup.find_all('author'):
+    for ix, aut in enumerate(soup.find_all('author')):
         author = {}
+        author['author_position'] = ix + 1
         last_name = aut.find('lastname')
         first_name = aut.find('forename')
         if last_name:
@@ -125,7 +133,7 @@ def parse_pubmed(x: str) -> dict:
     res['affiliations'] = affiliations
     # KEYWORDS
     keywords = [k.text for k in soup.find_all('keyword')]
-    res['keywords'] = keywords
+    res['keywords'] = [{"keyword": k} for k in keywords]
     # URL
     pubmed_id_elt = soup.find('articleid', {'idtype': 'pubmed'})
     if pubmed_id_elt:
@@ -218,7 +226,6 @@ def parse_pubmed_one_date(date: str) -> pd.DataFrame:
         parsed = parse_pubmed(notice['notice'])
         if parsed:
             all_parsed.append(parsed)
-    schema = json.load(open('/src/pubmed/server/main/schema.json', 'r'))
     is_valid = validate_json_schema(data=all_parsed, schema=schema)
     df_publis = pd.DataFrame(all_parsed)
     if is_valid:
