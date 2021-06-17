@@ -68,7 +68,7 @@ def parse_pubmed(notice: dict) -> dict:
     lang = ''
     if soup.find('language'):
         lang = soup.find('language').text[0:2]
-    res['language'] = lang
+    res['lang'] = lang
     #abstract
     abstract = ''
     if soup.find('abstracttext'):

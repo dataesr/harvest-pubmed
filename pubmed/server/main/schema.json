@@ -22,10 +22,40 @@
             "type": "string",
             "pattern": "^10\\.\\d{4,9}/[-._;()/:a-zA-Z0-9]+$"
         },
+        "external_ids": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id_type": {
+                        "type": "string"
+                    },
+                    "id_value": {
+                        "type": "string"
+                    }
+                },
+                "required": ["id_type", "id_value"]
+            }
+        },
         "title": {
             "type": "string"
         },
-        "language": {
+        "incipit": {
+            "type": "string"
+        },
+        "presentation": {
+            "type": "string"
+        },
+        "publisher": {
+            "type": "string"
+        },
+        "conference_title": {
+            "type": "string"
+        },
+        "conference_location": {
+            "type": "string"
+        },
+        "lang": {
             "type": "string",
             "minLength": 2
         },
@@ -62,11 +92,17 @@
 		}
 	    }
         },
-        "publication_date": {
-            "type": "string",
-            "format": "date",
-            "minLength": 10,
-            "maxLength": 10
+        "images": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+		    "url": {
+			"type": "string",
+                        "format": "uri"
+		    }
+		}
+	    }
         },
         "publication_year": {
             "type": "string",
@@ -95,6 +131,9 @@
                     "orcid": {
                         "type": "string",
                         "pattern": "^(\\d{4}-){3}\\d{3}[0-9X]$"
+                    },
+                    "hal_id": {
+                        "type": "string"
                     },
                     "email": {
                         "type": "string"
@@ -131,6 +170,18 @@
                                 "name": {
                                     "type": "string"
                                 },
+                                "country": {
+                                    "type": "string"
+                                },
+                                "city": {
+                                    "type": "string"
+                                },
+                                "postal-code": {
+                                    "type": "string"
+                                },
+                                "address-line": {
+                                    "type": "string"
+                                },
                     		"external_ids": {
                         	    "type": "array",
                                     "items": {
@@ -160,6 +211,18 @@
                 "type": "object",
                 "properties": {
                     "name": {
+                        "type": "string"
+                    },
+                    "country": {
+                        "type": "string"
+                    },
+                    "city": {
+                        "type": "string"
+                    },
+                    "postal-code": {
+                        "type": "string"
+                    },
+                    "address-line": {
                         "type": "string"
                     },
                     "external_ids": {
@@ -192,6 +255,56 @@
 		    },
 		    "lang": {
 			"type": "string"
+		    }
+		}
+	    }
+        },
+        "footnotes": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "footnote": {
+                        "type": "string"
+		    }
+		}
+	    }
+        },
+        "acknowledgments": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "acknowledgments": {
+                        "type": "string"
+		    }
+		}
+	    }
+        },
+        "classifications": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "type": "string"
+		    },
+		    "code": {
+			"type": "string"
+		    },
+		    "reference": {
+			"type": "string"
+		    }
+		}
+	    }
+        },
+        "fundings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "funding": {
+                        "type": "string"
 		    }
 		}
 	    }
@@ -237,6 +350,9 @@
             "items": {
                 "type": "object",
                 "properties": {
+                    "grant": {
+                        "type": "string"
+                    },
                     "grantid": {
                         "type": "string"
                     },
@@ -247,8 +363,7 @@
                         "type": "string"
                     }
                 },
-                "additionalProperties": false,
-                "required": ["agency", "country"]
+                "additionalProperties": false
             }
         },
         "has_grant": {
@@ -270,5 +385,11 @@
         }
     },
     "additionalProperties": false,
-    "required": ["sources", "title", "url"]
+    "patternProperties": {
+        "_date$": { 
+            "type": "string",
+            "format": "date"
+	}
+    },
+    "required": ["sources", "url"]
 }

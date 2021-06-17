@@ -30,7 +30,7 @@ def download_pmid(pmid: str) -> dict:
         try:
             notice = get_pmid(pmid, 10)
         except:
-            logger.error('Page not responding ' + pmid)
+            logger.error(f'Page not responding  {pmid}')
             notice = ''
     return {
         'id': f'pmid{pmid}',
