@@ -211,6 +211,12 @@
                 "required": ["full_name"]
             }
         },
+        "detected_countries": {
+            "type": "array",
+            "items": {
+                "type": "string"
+	    }
+	},
         "affiliations": {
             "type": "array",
             "items": {
