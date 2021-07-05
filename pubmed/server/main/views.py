@@ -1,5 +1,6 @@
 import datetime
 import redis
+from pubmed.server.main.logger import get_logger
 
 from flask import Blueprint, current_app, jsonify, render_template, request
 from rq import Connection, Queue
@@ -8,6 +9,7 @@ import dateutil.parser
 from pubmed.server.main.tasks import create_task_pubmed
 
 main_blueprint = Blueprint('main', __name__, )
+logger = get_logger()
 
 DATE_FORMAT = "%Y/%m/%d"
 DEFAULT_TIMEOUT = 21600
@@ -56,13 +58,15 @@ def run_task_pubmed_interval():
     del args['end']
     start_date = dateutil.parser.parse(start_string).date()
     end_date = dateutil.parser.parse(end_string).date()
-    delta = datetime.timedelta(days=1)
-    while start_date <= end_date:
-        args['date'] = start_date.strftime(DATE_FORMAT)
-        start_date += delta
+    nb_days = (end_date - start_date).days
+    logger.debug(f"starting tasks inbetween {start_date} and {end_date}")
+    for delta in range(nb_days):
+        current_date = start_date + datetime.timedelta(days=delta)
+        local_args = args.copy()
+        local_args['date'] = current_date.strftime(DATE_FORMAT)
         with Connection(redis.from_url(current_app.config['REDIS_URL'])):
             q = Queue('pubmed', default_timeout=DEFAULT_TIMEOUT)
-            task = q.enqueue(create_task_pubmed, args)
+            task = q.enqueue(create_task_pubmed, local_args)
     response_object = {
         'status': 'success',
         'data': {

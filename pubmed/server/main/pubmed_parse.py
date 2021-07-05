@@ -245,7 +245,7 @@ def parse_pubmed_one_date(date: str) -> pd.DataFrame:
         else:
             continue
 
-    publications_with_countries = enrich_and_filter_publications_by_country(all_parsed)
+    publications_with_countries = enrich_and_filter_publications_by_country(publications=all_parsed, countries_to_keep=FRENCH_ALPHA2)
     all_parsed = publications_with_countries['publications']
     all_parsed_filtered = publications_with_countries['filtered_publications']
 

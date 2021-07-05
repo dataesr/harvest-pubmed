@@ -1,5 +1,6 @@
 import os
 import requests
+requests.adapters.DEFAULT_RETRIES = 3
 from concurrent.futures import ThreadPoolExecutor
 from pubmed.server.main.utils import chunks
 from pubmed.server.main.elastic import client, load_in_es, reset_index
@@ -14,10 +15,11 @@ logger = get_logger(__name__)
 
 def check_matcher_health():
     res = requests.post(matcher_endpoint_url, json={'query': 'france', 'type': 'country'})
-    if 'results' in res:
+    try:
+        assert('results' in res.json())
         logger.debug("matcher seems healthy")
         return True
-    else:
+    except:
         logger.debug("matcher does not seem loaded, lets load it")
         load_res = requests.get(f'{AFFILIATION_MATCHER_SERVICE}/load', timeout=1000)
         logger.debug(load_res.json())
@@ -54,7 +56,7 @@ def get_country(affiliation):
 def is_na(x):
     return not(not x)
 
-def filter_publications_by_country(publications: list, countries_to_keep: list = None) -> list:
+def enrich_and_filter_publications_by_country(publications: list, countries_to_keep: list = None) -> list:
     logger.debug(f'Filter {len(publications)} publication against {",".join(countries_to_keep)} countries.')
     if countries_to_keep is None:
         countries_to_keep = []
