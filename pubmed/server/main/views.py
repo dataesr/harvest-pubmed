@@ -54,8 +54,10 @@ def run_task_pubmed_interval():
     task = args.get('task')
     start_string = args.get('start', "2013/01/01")
     end_string = args.get('end', datetime.date.today().isoformat())
-    del args['start']
-    del args['end']
+    if 'start' in args:
+        del args['start']
+    if 'end' in args:
+        del args['end']
     start_date = dateutil.parser.parse(start_string).date()
     end_date = dateutil.parser.parse(end_string).date()
     nb_days = (end_date - start_date).days
