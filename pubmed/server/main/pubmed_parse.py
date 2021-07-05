@@ -1,7 +1,7 @@
 import datetime
 import json
 import os
-
+import requests
 import pandas as pd
 import pymongo
 
@@ -12,8 +12,10 @@ from pubmed.server.main.logger import get_logger
 from pubmed.server.main.utils_mongo import drop_collection
 from pubmed.server.main.utils_swift import conn, get_objects, set_objects
 from pubmed.server.main.pubmed_harvest import download_one_entrez_date
-from pubmed.server.main.affiliation_matcher import enrich_and_filter_publications_by_country
 from pubmed.server.main.utils import FRENCH_ALPHA2
+
+AFFILIATION_MATCHER_SERVICE = os.getenv('AFFILIATION_MATCHER_SERVICE')
+matcher_endpoint_url = f'{AFFILIATION_MATCHER_SERVICE}/enrich_filter'
 
 PV_MOUNT = '/upw_data/'
 logger = get_logger()
@@ -245,7 +247,7 @@ def parse_pubmed_one_date(date: str) -> pd.DataFrame:
         else:
             continue
 
-    publications_with_countries = enrich_and_filter_publications_by_country(publications=all_parsed, countries_to_keep=FRENCH_ALPHA2)
+    publications_with_countries = requests.post(matcher_endpoint_url, json={'publications': all_parsed, 'countries_to_keep': FRENCH_ALPHA2}).json()
     all_parsed = publications_with_countries['publications']
     all_parsed_filtered = publications_with_countries['filtered_publications']
 
