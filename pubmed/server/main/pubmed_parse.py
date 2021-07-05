@@ -12,6 +12,8 @@ from pubmed.server.main.logger import get_logger
 from pubmed.server.main.utils_mongo import drop_collection
 from pubmed.server.main.utils_swift import conn, get_objects, set_objects
 from pubmed.server.main.pubmed_harvest import download_one_entrez_date
+from pubmed.server.main.affiliation_matcher import enrich_and_filter_publications_by_country
+from pubmed.server.main.utils import FRENCH_ALPHA2
 
 PV_MOUNT = '/upw_data/'
 logger = get_logger()
@@ -242,10 +244,19 @@ def parse_pubmed_one_date(date: str) -> pd.DataFrame:
             has_done_full_reshesh = True
         else:
             continue
+
+    publications_with_countries = enrich_and_filter_publications_by_country(all_parsed)
+    all_parsed = publications_with_countries['publications']
+    all_parsed_filtered = publications_with_countries['filtered_publications']
+
     is_valid = validate_json_schema(data=all_parsed, schema=schema)
+    
     df_publis = pd.DataFrame(all_parsed)
-        
     set_objects(conn=conn, date=date, all_objects=df_publis, container='pubmed', path='parsed')
+    logger.debug('Parsed notices saved into Object Storage.')
+    
+    df_publis_filtered = pd.DataFrame(all_parsed_filtered)
+    set_objects(conn=conn, date=date, all_objects=df_publis_filtered, container='pubmed', path='parsed/fr')
     logger.debug('Parsed notices saved into Object Storage.')
     
     if is_valid is False:
