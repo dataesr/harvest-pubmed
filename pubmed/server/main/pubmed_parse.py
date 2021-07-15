@@ -4,7 +4,7 @@ import os
 import requests
 import pandas as pd
 import pymongo
-
+import time
 from bs4 import BeautifulSoup
 from jsonschema import exceptions, validate
 
@@ -21,6 +21,28 @@ PV_MOUNT = '/upw_data/'
 logger = get_logger()
 
 schema = json.load(open('/src/pubmed/server/main/schema.json', 'r'))
+
+
+def get_matcher_results(publications: list, countries_to_keep: list) -> list:
+    r = requests.post(matcher_endpoint_url, json={'publications': publications, 'countries_to_keep': countries_to_keep})
+    task_id = r.json()['data']['task_id']
+    logger.debug(f"new task {task_id} for matcher")
+    for i in range(0, 10000):
+        r_task = requests.get(f"{AFFILIATION_MATCHER_SERVICE}/tasks/{task_id}").json()
+        try:
+            status = r_task['data']['task_status']
+        except:
+            logger.error(f"error in getting task {task_id} status : {r_task}")
+            status = "error"
+        if status == "finished":
+            return r_task['data']['task_result']
+        elif status in ["started", "queued"]:
+            time.sleep(2)
+            continue
+        else:
+            logger.error(f"error with task {task_id} : status {status}")
+            return []
+
 
 def get_orcid(x: str) -> str:
     for s in x.split('/'):
@@ -247,7 +269,8 @@ def parse_pubmed_one_date(date: str) -> pd.DataFrame:
         else:
             continue
 
-    publications_with_countries = requests.post(matcher_endpoint_url, json={'publications': all_parsed, 'countries_to_keep': FRENCH_ALPHA2}).json()
+    #publications_with_countries = requests.post(matcher_endpoint_url, json={'publications': all_parsed, 'countries_to_keep': FRENCH_ALPHA2}).json()
+    publications_with_countries = get_matcher_results(publications=all_parsed, countries_to_keep=FRENCH_ALPHA2) 
     all_parsed = publications_with_countries['publications']
     all_parsed_filtered = publications_with_countries['filtered_publications']
 
