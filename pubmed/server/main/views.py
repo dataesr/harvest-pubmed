@@ -1,18 +1,17 @@
 import datetime
+import dateutil.parser
 import redis
-from pubmed.server.main.logger import get_logger
 
 from flask import Blueprint, current_app, jsonify, render_template, request
 from rq import Connection, Queue
-import dateutil.parser
 
+from pubmed.server.main.logger import get_logger
 from pubmed.server.main.tasks import create_task_pubmed
 
-main_blueprint = Blueprint('main', __name__, )
-logger = get_logger()
-
-DATE_FORMAT = "%Y/%m/%d"
+DATE_FORMAT = '%Y/%m/%d'
 DEFAULT_TIMEOUT = 21600
+logger = get_logger()
+main_blueprint = Blueprint('main', __name__, )
 
 
 @main_blueprint.route('/', methods=['GET'])
@@ -52,7 +51,7 @@ def run_task_pubmed_interval():
     """
     args = request.get_json(force=True)
     task = args.get('task')
-    start_string = args.get('start', "2013/01/01")
+    start_string = args.get('start', '2013/01/01')
     end_string = args.get('end', datetime.date.today().isoformat())
     if 'start' in args:
         del args['start']
