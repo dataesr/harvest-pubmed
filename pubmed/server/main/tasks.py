@@ -1,4 +1,5 @@
 import sys
+
 from pubmed.server.main.logger import get_logger
 from pubmed.server.main.pubmed_harvest import download_one_entrez_date
 from pubmed.server.main.pubmed_parse import pubmed_to_json, pubmed_to_mongo
@@ -21,7 +22,7 @@ def create_task_pubmed(args: dict) -> None:
             download_one_entrez_date(date=date)
         except:
             error = sys.exc_info()[0]
-            logger.error(f"harvesting of pubmed for date {date} caused an error : {error}")
+            logger.error(f'Harvesting of pubmed for date {date} caused an error : {error}')
         pubmed_to_json(date=date)
     else:
         logger.error('Task error: your request should have a task between "harvest", "parse", "load" or "all".')

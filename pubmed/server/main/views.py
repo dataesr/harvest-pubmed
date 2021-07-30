@@ -61,7 +61,7 @@ def run_task_pubmed_interval():
     start_date = dateutil.parser.parse(start_string).date()
     end_date = dateutil.parser.parse(end_string).date()
     nb_days = (end_date - start_date).days
-    logger.debug(f"starting tasks inbetween {start_date} and {end_date}")
+    logger.debug(f'Starting tasks inbetween {start_date} and {end_date}')
     for delta in range(nb_days):
         current_date = start_date + datetime.timedelta(days=delta)
         local_args = args.copy()
@@ -90,7 +90,7 @@ def get_status(task_id):
                 'task_id': task.get_id(),
                 'task_status': task.get_status(),
                 'task_result': task.result,
-            },
+            }
         }
     else:
         response_object = {'status': 'error'}

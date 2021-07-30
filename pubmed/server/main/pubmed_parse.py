@@ -1,6 +1,8 @@
 import datetime
 import json
 import os
+from typing import Union
+
 import requests
 import pandas as pd
 import pymongo
@@ -44,7 +46,7 @@ def get_matcher_results(publications: list, countries_to_keep: list) -> list:
             return []
 
 
-def get_orcid(x: str) -> str:
+def get_orcid(x: str) -> Union[str, None]:
     for s in x.split('/'):
         v = s.strip()
         if len(v) == 19:
@@ -68,9 +70,7 @@ def get_date(elt: str) -> str:
 
 
 def parse_pubmed(notice: dict) -> dict:
-    res = {}
-    res['sources'] = ['pubmed']
-    res['domains'] = ['health']
+    res = {'sources': ['pubmed'], 'domains': ['health']}
     x = notice['notice']
     soup = BeautifulSoup(x, 'lxml')
     # DOI
@@ -90,12 +90,12 @@ def parse_pubmed(notice: dict) -> dict:
     if soup.find('articletitle'):
         title = soup.find('articletitle').text
     res['title'] = title
-    #lang
+    # Lang
     lang = ''
     if soup.find('language'):
         lang = soup.find('language').text[0:2]
     res['lang'] = lang
-    #abstract
+    # Abstract
     abstract = ''
     if soup.find('abstracttext'):
         abstract = {'abstract': soup.find('abstracttext').text}
@@ -103,14 +103,12 @@ def parse_pubmed(notice: dict) -> dict:
             abstract['lang'] = lang
     if abstract:
         res['abstract'] = [abstract]
-
     publication_date = get_date(soup.find('articledate'))
     if publication_date[0:4] == 'XXXX':
         publication_date = get_date(soup.find('pubmedpubdate', {'pubstatus': 'entrez'}))
     if publication_date[0:4] == 'XXXX':
         publication_date = get_date(soup.find('datecompleted'))
     res['publication_date'] = publication_date
-    #res['publication_year_month'] = res['publication_date'][0:7]
     res['publication_year'] = res['publication_date'][0:4]
     publication_types = []
     for e in soup.find_all('publicationtype'):
@@ -119,8 +117,7 @@ def parse_pubmed(notice: dict) -> dict:
     authors = []
     affiliations = []
     for ix, aut in enumerate(soup.find_all('author')):
-        author = {}
-        author['author_position'] = ix + 1
+        author = {'author_position': ix + 1}
         last_name = aut.find('lastname')
         first_name = aut.find('forename')
         if last_name:
@@ -137,7 +134,6 @@ def parse_pubmed(notice: dict) -> dict:
             if 'external_ids' not in author:
                 author['external_ids'] = []
             author['external_ids'].append({'id_type': source_id.lower(), 'id_value': identifier.text})
-
         author['full_name'] = author.get('first_name', '') + ' ' + author.get('last_name', '')
         author['full_name'] = author['full_name'].strip()
         if len(author) > 0 and author not in authors:
@@ -161,9 +157,9 @@ def parse_pubmed(notice: dict) -> dict:
             author['affiliations'] = author_aff
     res['authors'] = authors
     res['affiliations'] = affiliations
-    # KEYWORDS
+    # Keywords
     keywords = [k.text for k in soup.find_all('keyword')]
-    res['keywords'] = [{"keyword": k} for k in keywords]
+    res['keywords'] = [{'keyword': keyword} for keyword in keywords]
     # URL
     pubmed_id_elt = soup.find('articleid', {'idtype': 'pubmed'})
     if pubmed_id_elt:
@@ -175,7 +171,7 @@ def parse_pubmed(notice: dict) -> dict:
         return False
     res['url'] = f'https://www.ncbi.nlm.nih.gov/pubmed/{pubmed_id}'
     res['pmid'] = f'{pubmed_id}'
-    # MESH
+    # Mesh
     mesh_headings = []
     for mesh_elt in soup.find_all('meshheading'):
         mesh = ''
@@ -235,11 +231,11 @@ def parse_pubmed(notice: dict) -> dict:
     return res
 
 
-def validate_json_schema(data: list, schema: dict) -> bool:
+def validate_json_schema(data: list, _schema: dict) -> bool:
     is_valid = True
     try:
         for datum in data:
-            validate(instance=datum, schema=schema)
+            validate(instance=datum, schema=_schema)
     except exceptions.ValidationError as error:
         is_valid = False
         logger.debug(error)
@@ -259,31 +255,24 @@ def parse_pubmed_one_date(date: str) -> pd.DataFrame:
             parsed = parse_pubmed(notice)
         except:
             parsed = None
-
         if parsed:
             all_parsed.append(parsed)
         elif has_done_full_reshesh is False:
-            logger.debug(f"refresh full download for date {date}")
+            logger.debug(f'Refresh full download for date {date}')
             download_one_entrez_date(date=date, refresh_all=True)
             has_done_full_reshesh = True
         else:
             continue
-
-    #publications_with_countries = requests.post(matcher_endpoint_url, json={'publications': all_parsed, 'countries_to_keep': FRENCH_ALPHA2}).json()
-    publications_with_countries = get_matcher_results(publications=all_parsed, countries_to_keep=FRENCH_ALPHA2) 
+    publications_with_countries = get_matcher_results(publications=all_parsed, countries_to_keep=FRENCH_ALPHA2)
     all_parsed = publications_with_countries['publications']
     all_parsed_filtered = publications_with_countries['filtered_publications']
-
-    is_valid = validate_json_schema(data=all_parsed, schema=schema)
-    
+    is_valid = validate_json_schema(data=all_parsed, _schema=schema)
     df_publis = pd.DataFrame(all_parsed)
     set_objects(conn=conn, date=date, all_objects=df_publis, container='pubmed', path='parsed')
     logger.debug('Parsed notices saved into Object Storage.')
-    
     df_publis_filtered = pd.DataFrame(all_parsed_filtered)
     set_objects(conn=conn, date=date, all_objects=df_publis_filtered, container='pubmed', path='parsed/fr')
-    logger.debug('Parsed notices saved into Object Storage.')
-    
+    logger.debug('Filtered notices saved into Object Storage.')
     if is_valid is False:
         logger.debug('BEWARE !! Some notices are not schema-valid. See previous logs.')
     return df_publis
