@@ -1,48 +1,46 @@
 import datetime
 import json
 import os
-from typing import Union
-
-import requests
 import pandas as pd
 import pymongo
+import requests
 import time
+
 from bs4 import BeautifulSoup
 from jsonschema import exceptions, validate
+from typing import Union
 
 from pubmed.server.main.logger import get_logger
-from pubmed.server.main.utils_mongo import drop_collection
-from pubmed.server.main.utils_swift import conn, get_objects, set_objects
 from pubmed.server.main.pubmed_harvest import download_one_entrez_date
 from pubmed.server.main.utils import FRENCH_ALPHA2
+from pubmed.server.main.utils_mongo import drop_collection
+from pubmed.server.main.utils_swift import conn, get_objects, set_objects
 
 AFFILIATION_MATCHER_SERVICE = os.getenv('AFFILIATION_MATCHER_SERVICE')
-matcher_endpoint_url = f'{AFFILIATION_MATCHER_SERVICE}/enrich_filter'
-
-PV_MOUNT = '/upw_data/'
 logger = get_logger()
-
+matcher_endpoint_url = f'{AFFILIATION_MATCHER_SERVICE}/enrich_filter'
+PV_MOUNT = '/upw_data/'
 schema = json.load(open('/src/pubmed/server/main/schema.json', 'r'))
 
 
 def get_matcher_results(publications: list, countries_to_keep: list) -> list:
     r = requests.post(matcher_endpoint_url, json={'publications': publications, 'countries_to_keep': countries_to_keep})
     task_id = r.json()['data']['task_id']
-    logger.debug(f"new task {task_id} for matcher")
+    logger.debug(f'New task {task_id} for matcher')
     for i in range(0, 10000):
-        r_task = requests.get(f"{AFFILIATION_MATCHER_SERVICE}/tasks/{task_id}").json()
+        r_task = requests.get(f'{AFFILIATION_MATCHER_SERVICE}/tasks/{task_id}').json()
         try:
             status = r_task['data']['task_status']
         except:
-            logger.error(f"error in getting task {task_id} status : {r_task}")
-            status = "error"
-        if status == "finished":
+            logger.error(f'Error in getting task {task_id} status : {r_task}')
+            status = 'error'
+        if status == 'finished':
             return r_task['data']['task_result']
-        elif status in ["started", "queued"]:
+        elif status in ['started', 'queued']:
             time.sleep(2)
             continue
         else:
-            logger.error(f"error with task {task_id} : status {status}")
+            logger.error(f'Error with task {task_id} : status {status}')
             return []
 
 
