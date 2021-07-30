@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import pandas as pd
+import pycountry
 import pymongo
 import requests
 import time
@@ -91,7 +92,8 @@ def parse_pubmed(notice: dict) -> dict:
     # Lang
     lang = ''
     if soup.find('language'):
-        lang = soup.find('language').text[0:2]
+        language = soup.find('language').text.lower()
+        lang = [country.alpha_2 for country in pycountry.countries if language == country.name[:3].lower()][0]
     res['lang'] = lang
     # Abstract
     abstract = ''
