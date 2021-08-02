@@ -68,7 +68,7 @@ def get_date(elt: str) -> str:
     return f'{year}-{month}-{day}'
 
 
-def parse_pubmed(notice: dict) -> dict:
+def parse_pubmed(notice: dict) -> Union[bool, dict]:
     res = {'sources': ['pubmed'], 'domains': ['health']}
     x = notice['notice']
     soup = BeautifulSoup(x, 'lxml')
@@ -247,7 +247,7 @@ def parse_pubmed_one_date(date: str) -> pd.DataFrame:
     all_notices = get_objects(conn=conn, date=date, container='pubmed', path='notices')
     logger.debug(f'Len notices = {len(all_notices)}')
     all_parsed = []
-    has_done_full_reshesh = False
+    has_done_full_refresh = False
     for notice in all_notices:
         if 'pmid' not in notice:
             continue
@@ -257,10 +257,10 @@ def parse_pubmed_one_date(date: str) -> pd.DataFrame:
             parsed = None
         if parsed:
             all_parsed.append(parsed)
-        elif has_done_full_reshesh is False:
+        elif has_done_full_refresh is False:
             logger.debug(f'Refresh full download for date {date}')
             download_one_entrez_date(date=date, refresh_all=True)
-            has_done_full_reshesh = True
+            has_done_full_refresh = True
         else:
             continue
     publications_with_countries = get_matcher_results(publications=all_parsed, countries_to_keep=FRENCH_ALPHA2)
