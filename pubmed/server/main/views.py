@@ -9,7 +9,7 @@ from pubmed.server.main.logger import get_logger
 from pubmed.server.main.tasks import create_task_pubmed
 
 DATE_FORMAT = '%Y/%m/%d'
-DEFAULT_TIMEOUT = 21600
+DEFAULT_TIMEOUT = 36000
 logger = get_logger()
 main_blueprint = Blueprint('main', __name__, )
 
