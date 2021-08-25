@@ -91,9 +91,29 @@ def parse_pubmed(notice: dict) -> Union[bool, dict]:
     res['title'] = title
     # Lang
     lang = ''
+    languages = {
+        'chi': 'chinese',
+        'dan': 'danish',
+        'dut': 'dutch',
+        'eng': 'english',
+        'fre': 'french',
+        'ger': 'german',
+        'hun': 'hungarian',
+        'ita': 'italian',
+        'jpn': 'japanese',
+        'kor': 'korean',
+        'pol': 'polish',
+        'por': 'portuguese',
+        'rus': 'russian',
+        'spa': 'spanish',
+        'swe': 'swedish',
+        'tur': 'turkish'
+    }
     if soup.find('language'):
         language = soup.find('language').text.lower()
-        lang = [country.alpha_2 for country in pycountry.countries if language == country.name[:3].lower()][0]
+        if language not in languages.keys():
+            logger.debug(f'Language not found : {language}')
+        lang = languages.get(language, language)
     res['lang'] = lang
     # Abstract
     abstract = ''

@@ -1,10 +1,10 @@
 import gzip
 import json
 import os
-from io import BytesIO, TextIOWrapper
-
 import pandas as pd
 import swiftclient
+
+from io import BytesIO, TextIOWrapper
 
 from pubmed.server.main.logger import get_logger
 
@@ -15,6 +15,7 @@ project_name = os.getenv('OS_PROJECT_NAME')
 tenant_name = os.getenv('OS_TENANT_NAME')
 username = os.getenv('OS_USERNAME')
 user = f'{tenant_name}:{username}'
+region_name = 'GRA'
 
 conn = swiftclient.Connection(
     authurl='https://auth.cloud.ovh.net/v3',
@@ -25,7 +26,8 @@ conn = swiftclient.Connection(
         'project_domain_name': 'Default',
         'project_id': project_id,
         'project_name': project_name,
-        'region_name': 'GRA'},
+        'region_name': region_name
+    },
     auth_version='3'
 )
 
@@ -62,13 +64,11 @@ def get_objects(conn: swiftclient.Connection, date: str, container: str, path: s
 def set_objects(conn: swiftclient.Connection, date: str, all_objects: list, container: str, path: str) -> None:
     logger.debug(f'Setting object {container} {path}')
     if isinstance(all_objects, list):
-        all_notices_content = pd.DataFrame(all_objects)
-    else:
-        all_notices_content = all_objects
+        all_objects = pd.DataFrame(all_objects)
     gz_buffer = BytesIO()
     with gzip.GzipFile(mode='w', fileobj=gz_buffer) as gz_file:
-        all_notices_content.to_json(TextIOWrapper(gz_file, 'utf8'), orient='records')
-    conn.put_object(container, get_notice_filename(date, path), contents=gz_buffer.getvalue())
+        all_objects.to_json(TextIOWrapper(gz_file, 'utf8'), orient='records')
+    conn.put_object(container=container, obj=get_notice_filename(date, path), contents=gz_buffer.getvalue())
     logger.debug('done')
     return
 
