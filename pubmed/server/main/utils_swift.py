@@ -3,6 +3,7 @@ import json
 import os
 import pandas as pd
 import swiftclient
+from retry import retry
 
 from io import BytesIO, TextIOWrapper
 
@@ -32,6 +33,7 @@ conn = swiftclient.Connection(
 )
 
 
+@retry(delay=2, tries=50)
 def set_inventory_json(conn: swiftclient.Connection, date: str, inventory_json: dict, container: str, path: str)\
         -> None:
     contents = json.dumps(inventory_json)
@@ -39,6 +41,7 @@ def set_inventory_json(conn: swiftclient.Connection, date: str, inventory_json: 
     return
 
 
+@retry(delay=2, tries=50)
 def get_inventory_json(conn: swiftclient.Connection, date: str, container: str, path: str) -> dict:
     try:
         inventory = conn.get_object(container, f'{path}/inventory_{date.replace("/", "")}')[1]
@@ -53,6 +56,7 @@ def get_notice_filename(date: str, path: str) -> str:
     return f'{path}/{date}/{path}_{fulldate}.json.gz'
 
 
+@retry(delay=2, tries=50)
 def get_objects(conn: swiftclient.Connection, date: str, container: str, path: str) -> list:
     try:
         df = pd.read_json(BytesIO(conn.get_object(container, get_notice_filename(date, path))[1]), compression='gzip')
@@ -61,6 +65,7 @@ def get_objects(conn: swiftclient.Connection, date: str, container: str, path: s
     return df.to_dict('records')
 
 
+@retry(delay=2, tries=50)
 def set_objects(conn: swiftclient.Connection, date: str, all_objects: list, container: str, path: str) -> None:
     logger.debug(f'Setting object {container} {path}')
     if isinstance(all_objects, list):
