@@ -6,7 +6,8 @@ from flask import Blueprint, current_app, jsonify, render_template, request
 from rq import Connection, Queue
 
 from pubmed.server.main.logger import get_logger
-from pubmed.server.main.tasks import create_task_pubmed
+from pubmed.server.main.tasks import create_task_pubmed, create_task_medline
+from pubmed.server.main.medline_harvest import get_all_files
 
 DATE_FORMAT = '%Y/%m/%d'
 DEFAULT_TIMEOUT = 36000
@@ -39,6 +40,24 @@ def run_task_harvest():
     }
     return jsonify(response_object), 202
 
+@main_blueprint.route('/medline', methods=['POST'])
+def run_task_medline():
+    """
+    Harvest data from medline
+    """
+    args = request.get_json(force=True)
+    all_files = get_all_files()
+    for url in all_files:
+        with Connection(redis.from_url(current_app.config['REDIS_URL'])):
+            q = Queue('pubmed', default_timeout=DEFAULT_TIMEOUT)
+            task = q.enqueue(create_task_medline, url)
+            response_object = {
+            'status': 'success',
+            'data': {
+                'task_id': task.get_id()
+                }
+            }
+    return jsonify(response_object), 202
 
 @main_blueprint.route('/pubmed_interval', methods=['POST'])
 def run_task_pubmed_interval():
