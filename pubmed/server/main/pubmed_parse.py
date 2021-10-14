@@ -46,7 +46,7 @@ def get_matcher_results(publications: list, countries_to_keep: list) -> list:
 
 
 def get_orcid(x: str) -> Union[str, None]:
-    for s in x.split('/'):
+    for s in x.upper().split('/'):
         v = s.strip()
         if len(v) == 19:
             return v

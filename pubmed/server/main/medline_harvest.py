@@ -88,7 +88,7 @@ def parse_medline(url):
         set_objects_raw(conn=conn, path='removed/'+filename, all_objects=removed_pmids, container='medline')
 
     chunk_index = 0
-    for all_parsed_chunk in chunks(all_parsed, 3000):
+    for all_parsed_chunk in chunks(all_parsed, 1000):
         logger.debug(f'matching chunk {chunk_index} for {filename}')
         publications_with_countries = get_matcher_results(publications=all_parsed_chunk, countries_to_keep=FRENCH_ALPHA2)
         all_parsed_publications = publications_with_countries['publications']
