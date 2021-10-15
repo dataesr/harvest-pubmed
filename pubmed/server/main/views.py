@@ -49,7 +49,7 @@ def run_task_medline():
     all_files = get_all_files()
     for url in all_files:
         with Connection(redis.from_url(current_app.config['REDIS_URL'])):
-            q = Queue('pubmed', default_timeout=DEFAULT_TIMEOUT)
+            q = Queue('pubmed', default_timeout=DEFAULT_TIMEOUT * 10)
             task = q.enqueue(create_task_medline, url)
             response_object = {
             'status': 'success',
