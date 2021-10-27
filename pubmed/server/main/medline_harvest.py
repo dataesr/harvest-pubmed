@@ -18,7 +18,7 @@ from pubmed.server.main.pubmed_parse import parse_pubmed
 from pubmed.server.main.utils import FRENCH_ALPHA2, chunks
 
 AFFILIATION_MATCHER_SERVICE = os.getenv('AFFILIATION_MATCHER_SERVICE')
-logger = get_logger()
+logger = get_logger(__name__)
 matcher_endpoint_url = f'{AFFILIATION_MATCHER_SERVICE}/enrich_filter'
 PV_MOUNT = '/upw_data/'
 schema = json.load(open('/src/pubmed/server/main/schema.json', 'r'))
@@ -62,23 +62,22 @@ def get_matcher_results(publications: list, countries_to_keep: list) -> list:
             logger.error(f'Error with task {task_id} : status {status}')
             return []
 
-def parse_medline(url):
+def download_medline(url):
     logger.debug(f'dowloading {url}')
     filename = url.split('/')[-1].split('.')[0]
     s=requests.get(url).content
     input_content = gzip.open(io.BytesIO(s))
-    logger.debug(f'parsing xml {filename}')
+    logger.debug(f'reading xml {filename}')
     tree = ET.parse(input_content)
     root = tree.getroot()
-    all_parsed = []
     removed_pmids = []
+    all_notices = []
     for child in root:
         citation = child.find('MedlineCitation')
         if citation:
             new_pmid = citation.find('PMID').text
             current_notice = {'notice': ET.tostring(child)}
-            current_parsed = parse_pubmed(current_notice)
-            all_parsed.append(current_parsed)
+            all_notices.append(current_notice)
         elif child.tag == 'DeleteCitation':
             removed_pmids = [{'pmid': c.text} for c in child.findall('PMID')]
         else:
@@ -86,20 +85,27 @@ def parse_medline(url):
             logger.debug(ET.tostring(child))
     if removed_pmids:
         set_objects_raw(conn=conn, path='removed/'+filename, all_objects=removed_pmids, container='medline')
-
     chunk_index = 0
-    for all_parsed_chunk in chunks(all_parsed, 1000):
-        logger.debug(f'matching chunk {chunk_index} for {filename}')
-        publications_with_countries = get_matcher_results(publications=all_parsed_chunk, countries_to_keep=FRENCH_ALPHA2)
-        all_parsed_publications = publications_with_countries['publications']
-        all_parsed_filtered = publications_with_countries['filtered_publications']
-        is_valid = validate_json_schema(data=all_parsed_publications, _schema=schema)
-        df_publis = pd.DataFrame(all_parsed_publications)
-        set_objects_raw(conn=conn, path=f'{filename}_{chunk_index}', all_objects=df_publis, container='medline')
-        logger.debug('Parsed notices saved into Object Storage.')
-        df_publis_filtered = pd.DataFrame(all_parsed_filtered)
-        set_objects_raw(conn=conn, path=f'fr/{filename}_{chunk_index}', all_objects=df_publis_filtered, container='medline')
-        logger.debug('Filtered notices saved into Object Storage.')
-        if is_valid is False:
-            logger.debug('BEWARE !! Some notices are not schema-valid. See previous logs.')
+    for all_notices_chunk in chunks(all_notices, 1000):
+        set_objects_raw(conn=conn, path=f'notices/{filename}_{chunk_index}', all_objects=all_notices_chunk, container='medline')
         chunk_index += 1
+
+def parse_medline(filename):
+    logger.debug(f'matching {filename}')
+    notices = get_objects_raw(filename)
+    publications = []
+    for notices in notices:
+        publication = parse_pubmed(notice)
+        publications.append(publication)
+    publications_with_countries = get_matcher_results(publications=publications, countries_to_keep=FRENCH_ALPHA2)
+    all_parsed_publications = publications_with_countries['publications']
+    all_parsed_filtered = publications_with_countries['filtered_publications']
+    is_valid = validate_json_schema(data=all_parsed_publications, _schema=schema)
+    df_publis = pd.DataFrame(all_parsed_publications)
+    set_objects_raw(conn=conn, path=f'parsed/{filename}', all_objects=df_publis, container='medline')
+    logger.debug('Parsed notices saved into Object Storage.')
+    df_publis_filtered = pd.DataFrame(all_parsed_filtered)
+    set_objects_raw(conn=conn, path=f'parsed/fr/{filename}', all_objects=df_publis_filtered, container='medline')
+    logger.debug('Filtered notices saved into Object Storage.')
+    if is_valid is False:
+        logger.debug('BEWARE !! Some notices are not schema-valid. See previous logs.')

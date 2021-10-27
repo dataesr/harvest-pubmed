@@ -1,14 +1,10 @@
 import sys
 
 from pubmed.server.main.logger import get_logger
-from pubmed.server.main.medline_harvest import parse_medline
 from pubmed.server.main.pubmed_harvest import download_one_entrez_date
 from pubmed.server.main.pubmed_parse import pubmed_to_json, pubmed_to_mongo
 
-logger = get_logger()
-
-def create_task_medline(url):
-    parse_medline(url)
+logger = get_logger(__name__)
 
 def create_task_pubmed(args: dict) -> None:
     logger.debug(f'Create task pubmed with args {args}')

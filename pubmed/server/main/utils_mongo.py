@@ -3,7 +3,7 @@ from pymongo import MongoClient
 from pubmed.server.main.logger import get_logger
 
 PV_MOUNT = '/upw_data/'
-logger = get_logger()
+logger = get_logger(__name__)
 
 
 def drop_collection(coll: str) -> None:

@@ -11,7 +11,7 @@ from pubmed.server.main.utils_swift import conn, get_inventory_json, get_objects
 
 RETMAX = 25000
 API_KEY = '37773bb127a1587f715b8c26d28834b2f308'
-logger = get_logger()
+logger = get_logger(__name__)
 
 
 def get_pmid(pmid: str, timeout: int) -> str:

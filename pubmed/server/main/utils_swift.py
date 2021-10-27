@@ -9,7 +9,7 @@ from io import BytesIO, TextIOWrapper
 
 from pubmed.server.main.logger import get_logger
 
-logger = get_logger()
+logger = get_logger(__name__)
 key = os.getenv('OS_PASSWORD')
 project_id = os.getenv('OS_TENANT_ID')
 project_name = os.getenv('OS_PROJECT_NAME')
@@ -33,7 +33,7 @@ conn = swiftclient.Connection(
 )
 
 @retry(delay=2, tries=50)
-def get_objects_by_page(conn, container: str, page: int) -> list:
+def get_filenames_by_page(conn, container: str, page: int) -> list:
     logger.debug(f'Retrieving object from container {container} and page {page}')
     marker = None
     keep_going = True
@@ -47,9 +47,7 @@ def get_objects_by_page(conn, container: str, page: int) -> list:
         keep_going = (page > current_page)
         if len(content) > 0:
             marker = content[-1]['name']
-    objects = [get_objects(container=container, path=filename) for filename in filenames]
-    flat_list = [item for sublist in objects for item in sublist]
-    return flat_list
+    return filenames
 
 @retry(delay=2, tries=50)
 def set_inventory_json(conn: swiftclient.Connection, date: str, inventory_json: dict, container: str, path: str)\
@@ -105,7 +103,7 @@ def get_objects_raw(conn: swiftclient.Connection, path: str, container: str) -> 
 
 @retry(delay=2, tries=50)
 def set_objects_raw(conn: swiftclient.Connection, path: str, all_objects: list, container: str) -> None:
-    logger.debug(f'Setting object {container} {path}')
+    logger.debug(f'Setting raw object {container} {path}')
     if isinstance(all_objects, list):
         all_objects = pd.DataFrame(all_objects)
     gz_buffer = BytesIO()

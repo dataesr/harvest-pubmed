@@ -18,7 +18,7 @@ from pubmed.server.main.utils_mongo import drop_collection
 from pubmed.server.main.utils_swift import conn, get_objects, set_objects
 
 AFFILIATION_MATCHER_SERVICE = os.getenv('AFFILIATION_MATCHER_SERVICE')
-logger = get_logger()
+logger = get_logger(__name__)
 matcher_endpoint_url = f'{AFFILIATION_MATCHER_SERVICE}/enrich_filter'
 PV_MOUNT = '/upw_data/'
 schema = json.load(open('/src/pubmed/server/main/schema.json', 'r'))
