@@ -106,6 +106,7 @@ def parse_pubmed(notice: dict) -> Union[bool, dict]:
         'por': 'portuguese',
         'rus': 'russian',
         'spa': 'spanish',
+        'srp': 'serbian',
         'swe': 'swedish',
         'tur': 'turkish'
     }

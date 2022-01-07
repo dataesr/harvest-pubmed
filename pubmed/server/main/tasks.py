@@ -6,6 +6,7 @@ from pubmed.server.main.pubmed_parse import pubmed_to_json, pubmed_to_mongo
 
 logger = get_logger(__name__)
 
+
 def create_task_pubmed(args: dict) -> None:
     logger.debug(f'Create task pubmed with args {args}')
     task = args.get('task')

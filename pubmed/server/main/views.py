@@ -41,34 +41,38 @@ def run_task_harvest():
     }
     return jsonify(response_object), 202
 
+
 @main_blueprint.route('/medline', methods=['POST'])
 def run_task_medline():
     """
     Harvest data from medline
     """
-    args = request.get_json(force=True)
     all_files = get_all_files()
     for url in all_files:
         download_medline(url)
-
-    container='medline'
+    container = 'medline'
     for page in range(1, 10000):
-        logger.debug(f'Getting MEDLINE notices objects for page {page} from object storage ({container})')
-        filenames = get_filenames_by_page(conn, container=container, page=page)
+        logger.debug(f'Getting Medline notices objects for page {page} from object storage ({container})')
+        filenames = get_filenames_by_page(conn=conn, container=container, page=page)
         logger.debug(f'{len(filenames)} files retrieved from object storage')
         if len(filenames) == 0:
-            break
+            response_object = {
+                'status': 'error',
+                'message': f'No files in Object Storage container {container}'
+            }
         for filename in filenames:
-            with Connection(redis.from_url(current_app.config['REDIS_URL'])):
-                q = Queue('pubmed', default_timeout=DEFAULT_TIMEOUT * 10)
-                task = q.enqueue(parse_medline, filename)
-                response_object = {
-                'status': 'success',
-                'data': {
-                    'task_id': task.get_id()
+            if not filename.startswith('removed/'):
+                with Connection(redis.from_url(current_app.config['REDIS_URL'])):
+                    q = Queue('harvest-pubmed', default_timeout=DEFAULT_TIMEOUT)
+                    task = q.enqueue(parse_medline, filename)
+                    response_object = {
+                        'status': 'success',
+                        'data': {
+                            'task_id': task.get_id()
+                        }
                     }
-                }
     return jsonify(response_object), 202
+
 
 @main_blueprint.route('/pubmed_interval', methods=['POST'])
 def run_task_pubmed_interval():
@@ -87,7 +91,6 @@ def run_task_pubmed_interval():
         del args['start']
     if 'end' in args:
         del args['end']
-    flat_list = [item for sublist in objects for item in sublist]
     start_date = dateutil.parser.parse(start_string).date()
     end_date = dateutil.parser.parse(end_string).date()
     nb_days = (end_date - start_date).days
