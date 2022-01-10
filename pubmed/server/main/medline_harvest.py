@@ -9,6 +9,7 @@ import xml.etree.ElementTree as ET
 
 from bs4 import BeautifulSoup
 from jsonschema import exceptions, validate
+from retry import retry
 
 from pubmed.server.main.logger import get_logger
 from pubmed.server.main.pubmed_parse import parse_pubmed
@@ -64,10 +65,16 @@ def get_matcher_results(publications: list, countries_to_keep: list) -> list:
             return []
 
 
-def download_medline(url: str) -> None:
-    logger.debug(f'Dowloading Medline {url}')
-    filename = url.split('/')[-1].split('.')[0]
+@retry(delay=10, tries=50)
+def download_content(url: str) -> bytes:
     s = requests.get(url).content
+    return s
+
+
+def download_medline(url: str) -> None:
+    logger.debug(f'Downloading Medline {url}')
+    filename = url.split('/')[-1].split('.')[0]
+    s = download_content(url)
     input_content = gzip.open(io.BytesIO(s))
     logger.debug(f'Reading xml {filename}')
     tree = ET.parse(input_content)

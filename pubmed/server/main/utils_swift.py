@@ -3,9 +3,9 @@ import json
 import os
 import pandas as pd
 import swiftclient
-from retry import retry
 
 from io import BytesIO, TextIOWrapper
+from retry import retry
 
 from pubmed.server.main.logger import get_logger
 
