@@ -2,13 +2,14 @@ import datetime
 import dateutil.parser
 import redis
 
+from bs4 import BeautifulSoup
 from flask import Blueprint, current_app, jsonify, render_template, request
 from rq import Connection, Queue
 
 from pubmed.server.main.logger import get_logger
 from pubmed.server.main.tasks import create_task_pubmed
 from pubmed.server.main.medline_harvest import get_all_files, download_medline, parse_medline
-from pubmed.server.main.utils_swift import conn, get_filenames_by_page
+from pubmed.server.main.utils_swift import clean_container, conn, get_filenames_by_page, get_objects_raw
 
 DATE_FORMAT = '%Y/%m/%d'
 DEFAULT_TIMEOUT = 36000
@@ -47,30 +48,55 @@ def run_task_medline():
     """
     Harvest data from medline
     """
-    all_files = get_all_files()
-    for url in all_files:
-        download_medline(url)
     container = 'medline'
-    for page in range(1, 10000):
-        logger.debug(f'Getting Medline notices objects for page {page} from object storage ({container})')
-        filenames = get_filenames_by_page(conn=conn, container=container, page=page)
-        logger.debug(f'{len(filenames)} files retrieved from object storage')
-        if len(filenames) == 0:
-            response_object = {
-                'status': 'error',
-                'message': f'No files in Object Storage container {container}'
-            }
-        for filename in filenames:
-            if not filename.startswith('removed/'):
-                with Connection(redis.from_url(current_app.config['REDIS_URL'])):
-                    q = Queue('harvest-pubmed', default_timeout=DEFAULT_TIMEOUT)
-                    task = q.enqueue(parse_medline, filename)
-                    response_object = {
+    removed = []
+    #clean_container(container)
+    logger.debug('getting files from FTP medline')
+    all_files = get_all_files()
+    for ix, url in enumerate(all_files):
+        if ix % 100 == 0:
+            logger.debug(f'{ix} / {len(all_files)}')
+        filename = url.split('/')[-1].split('.')[0]
+        sample_notices = get_objects_raw(conn=conn, path=f'notices/{filename}_0', container=container)
+        if len(sample_notices) == 0:
+            download_medline(url)
+        removed += get_objects_raw(conn=conn, path=f'removed/{filename}', container=container)
+    removed_ids = set([str(k.get('pmid')) for k in removed])
+    logger.debug(f'{len(removed_ids)} removed pmids')
+    previous_ids = set([])
+    for ix, url in enumerate(all_files):
+        filename = url.split('/')[-1].split('.')[0]
+        for k in range(0, 1000):
+            pmids_to_parse = []
+            current_notices = get_objects_raw(conn=conn, path=f'notices/{filename}_{k}', container=container)
+            # if no more notices, stop
+            if len(current_notices) == 0:
+                break
+            for n in current_notices:
+                n['pmid'] = BeautifulSoup(n['notice'], 'lxml').find('pmid').text
+                if (n['pmid'] not in previous_ids) and (n['pmid'] not in removed_ids):
+                    pmids_to_parse.append(n['pmid'])
+            logger.debug(f'{len(current_notices)} current_notices, and {len(pmids_to_parse)} pmids_to_parse')
+            previous_ids.update(pmids_to_parse)
+            if len(pmids_to_parse) == 0:
+                continue
+            # there are notices, continue only if parsed not here yet !
+            current_parsed = get_objects_raw(conn=conn, path=f'parsed/{filename}_{k}', container=container)
+            logger.debug(f'{len(current_parsed)} current_parsed')
+            if len(current_parsed) == len(pmids_to_parse):
+                logger.debug(f'parsed/{filename}_{k} already parsed')
+                continue
+            logger.debug(f'sending task for {filename}_{k} with {len(pmids_to_parse)} pmids to parse')
+            with Connection(redis.from_url(current_app.config['REDIS_URL'])):
+                q = Queue('harvest-pubmed', default_timeout=DEFAULT_TIMEOUT)
+                task = q.enqueue(parse_medline, f'{filename}_{k}', pmids_to_parse)
+                response_object = {
                         'status': 'success',
                         'data': {
-                            'task_id': task.get_id()
+                        'task_id': task.get_id()
                         }
-                    }
+                }
+
     return jsonify(response_object), 202
 
 

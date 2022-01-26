@@ -32,7 +32,6 @@ def get_all_files():
     medline_files.reverse()
     return medline_files
 
-
 def validate_json_schema(data: list, _schema: dict) -> bool:
     is_valid = True
     try:
@@ -101,28 +100,34 @@ def download_medline(url: str) -> None:
         chunk_index += 1
 
 
-def parse_medline(filename: str) -> None:
-    logger.debug(f'Matching {filename}')
+def parse_medline(filename: str, pmids_to_parse) -> None:
+    logger.debug(f'parse medline {filename}')
     container = 'medline'
-    notices = get_objects_raw(conn=conn, path=filename, container='medline')
+    
+    notices = []
+    current_notices = get_objects_raw(conn=conn, path=f'notices/{filename}', container=container)
+    logger.debug(f'{len(current_notices)} current_notices')
+    for n in current_notices:
+        n['pmid'] = BeautifulSoup(n['notice'], 'lxml').find('pmid').text
+        if n['pmid'] in pmids_to_parse:
+            notices.append(n)
+    logger.debug(f'{len(notices)} notices')
+
     publications = []
     for notice in notices:
         publication = parse_pubmed(notice)
         publications.append(publication)
-    publications_with_countries = get_matcher_results(
-        publications=publications, countries_to_keep=FRENCH_ALPHA2)
+    logger.debug(f'{len(publications)} publications')
+    publications_with_countries = get_matcher_results(publications=publications, countries_to_keep=FRENCH_ALPHA2)
     all_parsed_publications = publications_with_countries['publications']
     all_parsed_filtered = publications_with_countries['filtered_publications']
-    is_valid = validate_json_schema(data=all_parsed_publications,
-                                    _schema=schema)
+    is_valid = validate_json_schema(data=all_parsed_publications, _schema=schema)
     df_publis = pd.DataFrame(all_parsed_publications)
-    set_objects_raw(conn=conn, path=f'parsed/{filename}',
-                    all_objects=df_publis, container=container)
-    logger.debug('Parsed notices saved into Object Storage.')
+    set_objects_raw(conn=conn, path=f'parsed/{filename}', all_objects=df_publis, container=container)
+    logger.debug(f'{len(df_publis)} parsed notices saved into Object Storage.')
     df_publis_filtered = pd.DataFrame(all_parsed_filtered)
-    set_objects_raw(conn=conn, path=f'parsed/fr/{filename}',
-                    all_objects=df_publis_filtered, container=container)
-    logger.debug('Filtered notices saved into Object Storage.')
+    set_objects_raw(conn=conn, path=f'parsed/fr/{filename}', all_objects=df_publis_filtered, container=container)
+    logger.debug(f'{len(df_publis_filtered)} filtered notices saved into Object Storage.')
     if is_valid is False:
         logger.debug(f'BEWARE !! Some notices are not schema-valid in file \
             {filename}. See previous logs.')

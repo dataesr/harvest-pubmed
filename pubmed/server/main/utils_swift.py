@@ -32,6 +32,18 @@ conn = swiftclient.Connection(
     auth_version='3'
 )
 
+def clean_container(container):
+    logger.debug(f'remove all files from container {container}...')
+    init_cmd = f"swift --os-auth-url https://auth.cloud.ovh.net/v3 --auth-version 3 \
+      --key {key}\
+      --user {user} \
+      --os-user-domain-name Default \
+      --os-project-domain-name Default \
+      --os-project-id {project_id} \
+      --os-project-name {project_name} \
+      --os-region-name GRA"
+    os.system(init_cmd+f" delete {container}")
+    logger.debug('done')
 
 @retry(delay=2, tries=50)
 def get_filenames_by_page(conn: swiftclient.Connection, container: str, page: int) -> list:
