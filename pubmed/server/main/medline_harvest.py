@@ -98,9 +98,11 @@ def download_medline(url: str) -> None:
         set_objects_raw(conn=conn, path=f'notices/{filename}_{chunk_index}',
                         all_objects=all_notices_chunk, container='medline')
         chunk_index += 1
+    logger.debug(f'{chunk_index} chunks downloaded for notice {filename}')
+    return chunk_index
 
 
-def parse_medline(filename: str, pmids_to_parse) -> None:
+def parse_medline(filename: str) -> None:
     logger.debug(f'parse medline {filename}')
     container = 'medline'
     
@@ -109,7 +111,8 @@ def parse_medline(filename: str, pmids_to_parse) -> None:
     logger.debug(f'{len(current_notices)} current_notices')
     for n in current_notices:
         n['pmid'] = BeautifulSoup(n['notice'], 'lxml').find('pmid').text
-        if n['pmid'] in pmids_to_parse:
+        #if n['pmid'] in pmids_to_parse:
+        if True: # parsing everything
             notices.append(n)
     logger.debug(f'{len(notices)} notices')
 

@@ -42,9 +42,45 @@ def run_task_harvest():
     }
     return jsonify(response_object), 202
 
-
 @main_blueprint.route('/medline', methods=['POST'])
 def run_task_medline():
+    """
+    Harvest data from medline
+    """
+    container = 'medline'
+    removed = []
+    #clean_container(container)
+    logger.debug('getting files from FTP medline')
+    all_notices_filenames = get_all_files()
+    for ix, url in enumerate(all_notices_filenames):
+        if ix % 100 == 0:
+            logger.debug(f'{ix} / {len(all_notices_filenames)} notices')
+        filename = url.split('/')[-1].split('.')[0]
+
+        sample_notices = get_objects_raw(conn=conn, path=f'notices/{filename}_0', container=container)
+        nb_notices = 0
+        if len(sample_notices) == 0:
+            nb_notices = download_medline(url)
+        
+        sample_parsed = get_objects_raw(conn=conn, path=f'parsed/{filename}_{nb_notices - 1}', container=container)
+        sample_notices = get_objects_raw(conn=conn, path=f'notices/{filename}_{nb_notices - 1}', container=container)
+        if len(sample_notices) != len(sample_parsed):
+            logger.debug(f'nb of notices {len(sample_notices)} != nb of existing parsed {len(sample_parsed)} => re-parse all {nb_notices} notices for {filename}')
+            for k in range(0, nb_notices):
+                logger.debug(f'sending parsing task for {filename}_{k}')
+                with Connection(redis.from_url(current_app.config['REDIS_URL'])):
+                    q = Queue('harvest-pubmed', default_timeout=DEFAULT_TIMEOUT)
+                    task = q.enqueue(parse_medline, f'{filename}_{k}')
+                    response_object = {
+                            'status': 'success',
+                            'data': {
+                            'task_id': task.get_id()
+                            }
+                    }
+    return jsonify(response_object), 202
+
+@main_blueprint.route('/medline_old', methods=['POST'])
+def run_task_medline_old():
     """
     Harvest data from medline
     """
