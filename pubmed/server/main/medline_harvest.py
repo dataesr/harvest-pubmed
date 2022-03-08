@@ -91,7 +91,7 @@ def download_medline(url: str) -> None:
             logger.debug('Unexpected error')
             logger.debug(ET.tostring(child))
     if removed_pmids:
-        set_objects_raw(conn=conn, path='removed/'+filename,
+        set_objects_raw(conn=conn, path='removed/'+filename+'.json.gz',
                         all_objects=removed_pmids, container='medline')
     chunk_index = 0
     for all_notices_chunk in chunks(all_notices, 1000):
@@ -126,10 +126,10 @@ def parse_medline(filename: str) -> None:
     all_parsed_filtered = publications_with_countries['filtered_publications']
     is_valid = validate_json_schema(data=all_parsed_publications, _schema=schema)
     df_publis = pd.DataFrame(all_parsed_publications)
-    set_objects_raw(conn=conn, path=f'parsed/{filename}', all_objects=df_publis, container=container)
+    set_objects_raw(conn=conn, path=f'parsed/fr/{filename[0:11]}/{filename}.json.gz', all_objects=df_publis, container=container)
     logger.debug(f'{len(df_publis)} parsed notices saved into Object Storage.')
     df_publis_filtered = pd.DataFrame(all_parsed_filtered)
-    set_objects_raw(conn=conn, path=f'parsed/fr/{filename}', all_objects=df_publis_filtered, container=container)
+    set_objects_raw(conn=conn, path=f'parsed/fr/{filename[0:11]}/{filename}.json.gz', all_objects=df_publis_filtered, container=container)
     logger.debug(f'{len(df_publis_filtered)} filtered notices saved into Object Storage.')
     if is_valid is False:
         logger.debug(f'BEWARE !! Some notices are not schema-valid in file \
