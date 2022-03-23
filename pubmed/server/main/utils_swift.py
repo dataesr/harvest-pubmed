@@ -150,3 +150,32 @@ def remove_all_elt_with_field(x: list, id_to_remove: str, field: str) -> None:
     n = get_nb_elt_with_field(x, id_to_remove, field)
     for i in range(0, n):
         remove_elt_with_field(x, id_to_remove, field)
+
+@retry(delay=2, tries=50)
+def exists_in_storage(container: str, path: str) -> bool:
+    try:
+        connection = get_connection()
+        connection.head_object(container, path)
+        return True
+    except:
+        return False
+
+def get_connection() -> swiftclient.Connection:
+    global conn
+    if conn is None:
+        conn = swiftclient.Connection(
+            authurl='https://auth.cloud.ovh.net/v3',
+            user=user,
+            key=key,
+            os_options={
+                'user_domain_name': 'Default',
+                'project_domain_name': 'Default',
+                'project_id': project_id,
+                'project_name': project_name,
+                'region_name': 'GRA'
+            },
+            auth_version='3'
+        )
+    return conn
+
+

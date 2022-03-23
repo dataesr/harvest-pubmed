@@ -9,7 +9,7 @@ from rq import Connection, Queue
 from pubmed.server.main.logger import get_logger
 from pubmed.server.main.tasks import create_task_pubmed
 from pubmed.server.main.medline_harvest import get_all_files, download_medline, parse_medline
-from pubmed.server.main.utils_swift import clean_container, conn, get_filenames_by_page, get_objects_raw
+from pubmed.server.main.utils_swift import clean_container, conn, get_filenames_by_page, get_objects_raw, exists_in_storage
 
 DATE_FORMAT = '%Y/%m/%d'
 DEFAULT_TIMEOUT = 36000
@@ -42,6 +42,14 @@ def run_task_harvest():
     }
     return jsonify(response_object), 202
 
+
+def get_nb_chunks(filename):
+    for i in range(0, 99999):
+        path = 'notices/{filename}_{i}'
+        if exists_in_storage('medline', path) is False:
+            return i
+            break
+
 @main_blueprint.route('/medline', methods=['POST'])
 def run_task_medline():
     """
@@ -54,19 +62,20 @@ def run_task_medline():
     all_notices_filenames = get_all_files()
     for ix, url in enumerate(all_notices_filenames):
         if ix % 100 == 0:
-            logger.debug(f'{ix} / {len(all_notices_filenames)} notices')
+            logger.debug(f'{ix} / {len(all_notices_filenames)} notice filenames')
         filename = url.split('/')[-1].split('.')[0]
 
-        sample_notices = get_objects_raw(conn=conn, path=f'notices/{filename}_0', container=container)
-        nb_notices = 0
-        if len(sample_notices) == 0:
-            nb_notices = download_medline(url)
+        # check if data in chunk _1
+        sample_notices = get_objects_raw(conn=conn, path=f'notices/{filename}_1', container=container)
+        nb_chunks = get_nb_chunks(filename)
+        if len(sample_notices) == 0 or nb_chunks < 1:
+            nb_chunks = download_medline(url)
         
-        sample_parsed = get_objects_raw(conn=conn, path=f'parsed/{filename}_{nb_notices - 1}', container=container)
-        sample_notices = get_objects_raw(conn=conn, path=f'notices/{filename}_{nb_notices - 1}', container=container)
+        sample_parsed = get_objects_raw(conn=conn, path=f'parsed/{filename}_{nb_chunks - 1}', container=container)
+        sample_notices = get_objects_raw(conn=conn, path=f'notices/{filename}_{nb_chunks - 1}', container=container)
         if len(sample_notices) != len(sample_parsed):
-            logger.debug(f'nb of notices {len(sample_notices)} != nb of existing parsed {len(sample_parsed)} => re-parse all {nb_notices} notices for {filename}')
-            for k in range(0, nb_notices):
+            logger.debug(f'nb of notices {len(sample_notices)} != nb of existing parsed {len(sample_parsed)} => re-parse all {nb_chunks} notices for {filename}')
+            for k in range(0, nb_chunks):
                 logger.debug(f'sending parsing task for {filename}_{k}')
                 with Connection(redis.from_url(current_app.config['REDIS_URL'])):
                     q = Queue('harvest-pubmed', default_timeout=DEFAULT_TIMEOUT)

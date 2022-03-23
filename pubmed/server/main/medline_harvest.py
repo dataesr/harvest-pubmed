@@ -71,6 +71,7 @@ def download_content(url: str) -> bytes:
 
 
 def download_medline(url: str) -> None:
+    # download url and split into chunks to OS notices
     logger.debug(f'Downloading Medline {url}')
     filename = url.split('/')[-1].split('.')[0]
     s = download_content(url)
