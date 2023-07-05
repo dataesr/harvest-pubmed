@@ -187,6 +187,7 @@ def parse_pubmed(notice: dict) -> Union[bool, dict]:
         pubmed_id = pubmed_id_elt.text
     else:
         pmid = notice.get('pmid')
+        res['external_ids'] = [{'id_type': 'pmid', 'id_value': pmid}]
         logger.warning(f'No pubmed element for pmid {pmid}?')
         logger.warning(x)
         return False
