@@ -52,7 +52,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: dataesr/mm-notifier-action@v1.1
+      - uses: dataesr/mm-notifier-action@v1.0.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           mattermost_channel: ${{ env.MM_NOTIFICATION_CHANNEL }}
